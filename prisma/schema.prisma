@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * =========================
+ * USER
+ * =========================
+ */
+model User {
+  id Int @id @default(autoincrement())
+
+  nombre String
+
+  email String @unique
+
+  password String
+
+  role Role
+
+  // LOCAL ASIGNADO
+  localId Int?
+
+  local Local? @relation(fields: [localId], references: [id])
+
+  // GUIAS ENVIADAS
+  guidesEnviadas Guide[] @relation("GuideSentBy")
+
+  // GUIAS RECIBIDAS
+  guidesRecibidas Guide[] @relation("GuideReceivedBy")
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * LOCAL (TIENDAS / SEDES)
+ * =========================
+ */
+model Local {
+  id Int @id @default(autoincrement())
+
+  nombre String
+
+  direccion String
+
+  red String
+
+  // RELACIONES
+  users User[]
+
+  assets Asset[]
+
+  // GUIAS
+  origenGuides Guide[] @relation("GuideOrigen")
+
+  destinoGuides Guide[] @relation("GuideDestino")
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * AREA (SOLO CENTRAL)
+ * =========================
+ */
+model Area {
+  id Int @id @default(autoincrement())
+
+  nombre String
+
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * FACTURAS
+ * =========================
+ */
+model Invoice {
+  id Int @id @default(autoincrement())
+
+  numeroFactura String
+
+  proveedor String
+
+  detalles String?
+
+  fecha DateTime
+
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * ACTIVOS
+ * =========================
+ */
+
+model Asset {
+  id Int @id @default(autoincrement())
+
+  codigo String @unique
+
+  serie String
+
+  dispositivo String
+
+  marca String
+
+  modelo String
+
+  categoria AssetCategory
+
+  observaciones String?
+
+  ip String?
+
+  estado AssetState
+
+  /**
+   * =========================
+   * UBICACIÓN
+   * =========================
+   */
+
+  // CENTRAL
+  areaId Int?
+
+  area Area? @relation(fields: [areaId], references: [id])
+
+  // LOCAL
+  localId Int?
+
+  local Local? @relation(fields: [localId], references: [id])
+
+  // OTROS
+  otherLocation String?
+
+  /**
+   * =========================
+   * FACTURA
+   * =========================
+   */
+  invoiceId Int?
+
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  /**
+   * =========================
+   * GUIAS
+   * =========================
+   */
+  guideDetails GuideDetail[]
+
+  /**
+   * =========================
+   * MOVIMIENTOS
+   * =========================
+   */
+  movements Movement[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * GUIAS
+ * =========================
+ */
+
+model Guide {
+  id Int @id @default(autoincrement())
+
+  // 180 - N° 000123
+  numero String @unique
+
+  estado GuideState
+
+  observaciones String?
+
+  /**
+   * =========================
+   * ORIGEN
+   * =========================
+   */
+
+  origenTipo LocationType
+
+  origenLocalId Int?
+
+  origenLocal Local? @relation("GuideOrigen", fields: [origenLocalId], references: [id])
+
+  /**
+   * =========================
+   * DESTINO
+   * =========================
+   */
+
+  destinoTipo DestinationType
+
+  // SI EL DESTINO ES LOCAL
+  destinoLocalId Int?
+
+  destinoLocal Local? @relation("GuideDestino", fields: [destinoLocalId], references: [id])
+
+  // SI EL DESTINO ES OTROS
+  otroDestino String?
+
+  /**
+   * =========================
+   * RESPONSABLE
+   * =========================
+   */
+
+  encargadoTipo ResponsableType
+
+  // SI ES PERSONAL DE SOPORTE
+  enviadoPorId Int?
+
+  enviadoPor User? @relation("GuideSentBy", fields: [enviadoPorId], references: [id])
+
+  /**
+   * =========================
+   * RECEPCIÓN
+   * =========================
+   */
+
+  recibidoPorId Int?
+
+  recibidoPor User? @relation("GuideReceivedBy", fields: [recibidoPorId], references: [id])
+
+  /**
+   * =========================
+   * FECHAS
+   * =========================
+   */
+
+  fechaEnvio DateTime @default(now())
+
+  fechaRecepcion DateTime?
+
+  /**
+   * =========================
+   * DETALLES
+   * =========================
+   */
+
+  details GuideDetail[]
+
+  /**
+   * =========================
+   * MOVIMIENTOS
+   * =========================
+   */
+
+  movements Movement[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * DETALLE GUIA
+ * =========================
+ */
+model GuideDetail {
+  id Int @id @default(autoincrement())
+
+  guideId Int
+
+  guide Guide @relation(fields: [guideId], references: [id])
+
+  assetId Int
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  estado GuideDetailState @default(ENVIADO)
+
+  recibido Boolean @default(false)
+
+  observaciones String?
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * MOVIMIENTOS
+ * =========================
+ */
+model Movement {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  origen String
+
+  destino String
+
+  observacion String?
+
+  guideId Int?
+
+  guide Guide? @relation(fields: [guideId], references: [id])
+
+  fecha DateTime @default(now())
+}
+
+/**
+ * =========================
+ * ENUMS
+ * =========================
+ */
+
+enum Role {
+  CENTRAL
+  LOCAL
+}
+
+enum AssetState {
+  CENTRAL
+  LOCAL
+  TRANSITO
+  OTROS
+  STOCK
+}
+
+enum AssetCategory {
+  CPU
+  MONITOR
+  IMPRESORA
+  SWITCH_ROUTER
+  LECTORA
+  CELULAR
+  TABLET
+  TECLADO
+  MOUSE
+  GAVETA
+  CAMARAS
+  OTROS
+}
+
+enum GuideState {
+  GENERADA
+  TRANSITO
+  RECIBIDA
+  PARCIAL
+}
+
+enum GuideDetailState {
+  ENVIADO
+  RECIBIDO
+  FALTANTE
+}
+
+enum LocationType {
+  CENTRAL
+  LOCAL
+  OTROS
+}
+
+enum DestinationType {
+  LOCAL
+  OTROS
+}
+
+enum ResponsableType {
+  SOPORTE
+  TRANSPORTE
+}
