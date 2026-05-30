@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getUser } from "@/lib/getUser";
 
 export async function GET() {
@@ -20,34 +19,22 @@ export async function GET() {
       );
     }
 
-    /**
-     * OBTENER LOCALES
-     */
-    const locales =
-      await prisma.local.findMany({
+    return NextResponse.json({
 
-        select: {
-          id: true,
-          nombre: true,
-        },
+      id: user.id,
 
-        orderBy: {
-          nombre: "asc",
-        },
-      });
+      nombre: user.nombre,
 
-    return NextResponse.json(
-      locales
-    );
+      role: user.role,
+
+      localId: user.localId,
+    });
 
   } catch (error) {
 
-    console.error(error);
-
     return NextResponse.json(
       {
-        error:
-          "Error obteniendo locales",
+        error: "Error obteniendo usuario",
       },
       {
         status: 500,

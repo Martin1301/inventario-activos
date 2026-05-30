@@ -8,56 +8,57 @@ datasource db {
 }
 
 /**
- * =========================
+ * =========================================
  * USER
- * =========================
+ * =========================================
  */
 model User {
-  id Int @id @default(autoincrement())
-
-  nombre String
-
-  email String @unique
-
+  id       Int    @id @default(autoincrement())
+  nombre   String
+  email    String @unique
   password String
+  role     Role
 
-  role Role
-
-  // LOCAL ASIGNADO
+  /**
+   * LOCAL ASIGNADO
+   */
   localId Int?
 
   local Local? @relation(fields: [localId], references: [id])
 
-  // GUIAS ENVIADAS
-  guidesEnviadas Guide[] @relation("GuideSentBy")
+  /**
+   * GUIAS
+   */
+  guidesEnviadas  Guide[] @relation("GuideSentBy")
 
-  // GUIAS RECIBIDAS
   guidesRecibidas Guide[] @relation("GuideReceivedBy")
+
+  guidesEncargado Guide[] @relation("GuideEncargado")
 
   createdAt DateTime @default(now())
 }
 
 /**
- * =========================
- * LOCAL (TIENDAS / SEDES)
- * =========================
+ * =========================================
+ * LOCAL
+ * =========================================
  */
 model Local {
-  id Int @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
+  nombre     String
+  direccion  String
+  red        String
 
-  nombre String
-
-  direccion String
-
-  red String
-
-  // RELACIONES
-  users User[]
-
+  /**
+   * RELACIONES
+   */
+  users  User[]
   assets Asset[]
 
-  // GUIAS
-  origenGuides Guide[] @relation("GuideOrigen")
+  /**
+   * GUIAS
+   */
+  origenGuides  Guide[] @relation("GuideOrigen")
 
   destinoGuides Guide[] @relation("GuideDestino")
 
@@ -65,13 +66,12 @@ model Local {
 }
 
 /**
- * =========================
- * AREA (SOLO CENTRAL)
- * =========================
+ * =========================================
+ * AREA
+ * =========================================
  */
 model Area {
-  id Int @id @default(autoincrement())
-
+  id     Int    @id @default(autoincrement())
   nombre String
 
   assets Asset[]
@@ -80,20 +80,16 @@ model Area {
 }
 
 /**
- * =========================
+ * =========================================
  * FACTURAS
- * =========================
+ * =========================================
  */
 model Invoice {
-  id Int @id @default(autoincrement())
-
+  id            Int    @id @default(autoincrement())
   numeroFactura String
-
-  proveedor String
-
-  detalles String?
-
-  fecha DateTime
+  proveedor     String
+  detalles      String?
+  fecha         DateTime
 
   assets Asset[]
 
@@ -101,99 +97,70 @@ model Invoice {
 }
 
 /**
- * =========================
+ * =========================================
  * ACTIVOS
- * =========================
+ * =========================================
  */
-
 model Asset {
-  id Int @id @default(autoincrement())
-
-  codigo String @unique
-
-  serie String
-
-  dispositivo String
-
-  marca String
-
-  modelo String
-
-  categoria AssetCategory
-
+  id            Int    @id @default(autoincrement())
+  codigo        String @unique
+  serie         String
+  dispositivo   String
+  marca         String
+  modelo        String
+  categoria     AssetCategory
   observaciones String?
+  ip            String?
 
-  ip String?
-
+  /**
+   * ESTADO
+   */
   estado AssetState
 
   /**
-   * =========================
    * UBICACIÓN
-   * =========================
    */
-
-  // CENTRAL
   areaId Int?
 
   area Area? @relation(fields: [areaId], references: [id])
 
-  // LOCAL
   localId Int?
 
   local Local? @relation(fields: [localId], references: [id])
 
-  // OTROS
   otherLocation String?
 
   /**
-   * =========================
    * FACTURA
-   * =========================
    */
   invoiceId Int?
 
   invoice Invoice? @relation(fields: [invoiceId], references: [id])
 
   /**
-   * =========================
-   * GUIAS
-   * =========================
+   * RELACIONES
    */
   guideDetails GuideDetail[]
 
-  /**
-   * =========================
-   * MOVIMIENTOS
-   * =========================
-   */
   movements Movement[]
 
   createdAt DateTime @default(now())
 }
 
 /**
- * =========================
+ * =========================================
  * GUIAS
- * =========================
+ * =========================================
  */
-
 model Guide {
-  id Int @id @default(autoincrement())
-
-  // 180 - N° 000123
-  numero String @unique
-
-  estado GuideState
-
+  id            Int    @id @default(autoincrement())
+  numero        String @unique
+  estado        GuideState
   observaciones String?
 
   /**
-   * =========================
    * ORIGEN
-   * =========================
    */
-
   origenTipo LocationType
 
   origenLocalId Int?
@@ -201,77 +168,62 @@ model Guide {
   origenLocal Local? @relation("GuideOrigen", fields: [origenLocalId], references: [id])
 
   /**
-   * =========================
    * DESTINO
-   * =========================
    */
-
   destinoTipo DestinationType
 
-  // SI EL DESTINO ES LOCAL
   destinoLocalId Int?
 
   destinoLocal Local? @relation("GuideDestino", fields: [destinoLocalId], references: [id])
 
-  // SI EL DESTINO ES OTROS
   otroDestino String?
 
   /**
-   * =========================
    * RESPONSABLE
-   * =========================
    */
-
   encargadoTipo ResponsableType
 
-  // SI ES PERSONAL DE SOPORTE
+  /**
+   * USUARIO CENTRAL RESPONSABLE
+   * DEL TRASLADO
+   */
+  encargadoUserId Int?
+
+  encargadoUser User? @relation("GuideEncargado", fields: [encargadoUserId], references: [id])
+
+  /**
+   * QUIEN ENVIA
+   */
   enviadoPorId Int?
 
   enviadoPor User? @relation("GuideSentBy", fields: [enviadoPorId], references: [id])
 
   /**
-   * =========================
-   * RECEPCIÓN
-   * =========================
+   * QUIEN RECIBE
    */
-
   recibidoPorId Int?
 
   recibidoPor User? @relation("GuideReceivedBy", fields: [recibidoPorId], references: [id])
 
   /**
-   * =========================
    * FECHAS
-   * =========================
    */
-
-  fechaEnvio DateTime @default(now())
-
+  fechaEnvio     DateTime @default(now())
   fechaRecepcion DateTime?
 
   /**
-   * =========================
-   * DETALLES
-   * =========================
+   * RELACIONES
    */
-
-  details GuideDetail[]
-
-  /**
-   * =========================
-   * MOVIMIENTOS
-   * =========================
-   */
-
+  details   GuideDetail[]
   movements Movement[]
 
   createdAt DateTime @default(now())
 }
 
 /**
- * =========================
+ * =========================================
  * DETALLE GUIA
- * =========================
+ * =========================================
  */
 model GuideDetail {
   id Int @id @default(autoincrement())
@@ -284,6 +236,9 @@ model GuideDetail {
 
   asset Asset @relation(fields: [assetId], references: [id])
 
+  /**
+   * RECEPCIÓN INDIVIDUAL
+   */
   estado GuideDetailState @default(ENVIADO)
 
   recibido Boolean @default(false)
@@ -294,9 +249,9 @@ model GuideDetail {
 }
 
 /**
- * =========================
+ * =========================================
  * MOVIMIENTOS
- * =========================
+ * =========================================
  */
 model Movement {
   id Int @id @default(autoincrement())
@@ -319,9 +274,9 @@ model Movement {
 }
 
 /**
- * =========================
+ * =========================================
  * ENUMS
- * =========================
+ * =========================================
  */
 
 enum Role {
@@ -330,11 +285,11 @@ enum Role {
 }
 
 enum AssetState {
-  CENTRAL
-  LOCAL
-  TRANSITO
-  OTROS
   STOCK
+  EN_USO
+  MALOGRADO
+  TRANSITO
+  BAJA
 }
 
 enum AssetCategory {
@@ -353,6 +308,7 @@ enum AssetCategory {
 }
 
 enum GuideState {
+  BORRADOR
   GENERADA
   TRANSITO
   RECIBIDA
@@ -372,6 +328,7 @@ enum LocationType {
 }
 
 enum DestinationType {
+  CENTRAL
   LOCAL
   OTROS
 }

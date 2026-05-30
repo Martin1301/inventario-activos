@@ -1,21 +1,35 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+
   try {
 
-    const { email, password } = await req.json();
+    const body = await req.json();
+
+    const {
+      email,
+      password,
+    } = body;
 
     const user = await prisma.user.findUnique({
-      where: { email },
+
+      where: {
+        email,
+      },
     });
 
     if (!user) {
+
       return NextResponse.json(
-        { error: "Usuario no existe" },
-        { status: 400 }
+        {
+          error: "Usuario no encontrado",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
@@ -25,32 +39,58 @@ export async function POST(req: Request) {
     );
 
     if (!valid) {
+
       return NextResponse.json(
-        { error: "Password incorrecto" },
-        { status: 400 }
+        {
+          error: "Password incorrecto",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
+    /**
+     * TOKEN
+     */
     const token = signToken({
+
       id: user.id,
+
       role: user.role,
+
       localId: user.localId,
     });
 
+    /**
+     * RESPONSE
+     */
     const response = NextResponse.json({
-      success: true,
+
+      ok: true,
+
       user: {
         id: user.id,
-        email: user.email,
+        nombre: user.nombre,
         role: user.role,
-        localId: user.localId,
       },
     });
 
-    response.cookies.set("token", token, {
+    /**
+     * COOKIE
+     */
+    response.cookies.set({
+
+      name: "token",
+
+      value: token,
+
       httpOnly: true,
+
       secure: false,
+
       sameSite: "lax",
+
       path: "/",
     });
 
@@ -58,11 +98,11 @@ export async function POST(req: Request) {
 
   } catch (error) {
 
-    console.error("LOGIN ERROR:", error);
+    console.error(error);
 
     return NextResponse.json(
       {
-        error: "Error interno del servidor",
+        error: "Error login",
       },
       {
         status: 500,

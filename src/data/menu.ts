@@ -5,7 +5,8 @@ import {
   ClipboardList,
   MapPin,
   ClipboardCheck,
-  Clock3
+  Clock3,
+  Warehouse 
 } from "lucide-react";
 
 export const menu = [
@@ -19,7 +20,11 @@ export const menu = [
     path: "/activos",
     icon: Package,
   },
-
+{
+        title: "Stock Local",
+        path: "/activos/stock",
+        icon: Warehouse,
+      },
   {
     title: "Guías",
     icon: ClipboardList,
