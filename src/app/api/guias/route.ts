@@ -14,7 +14,8 @@
  * GET GUIAS
  * =========================================
  */
-export async function GET(req: NextRequest) {
+
+ export async function GET(req: NextRequest) {
 
   try {
 
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
 
     const estado =
       searchParams.get("estado");
+
+    const modo =
+      searchParams.get("modo");
 
     /**
      * USER
@@ -58,40 +62,92 @@ export async function GET(req: NextRequest) {
         estado;
 
       /**
-       * =================================
-       * LOCAL
-       * =================================
+       * =====================================
+       * BORRADOR
+       * GUIAS POR CERRAR
+       * (ORIGEN)
+       * =====================================
        */
-      if (user.role === "LOCAL") {
+      if (
+        estado === "BORRADOR"
+      ) {
 
-        /**
-         * SOLO SUS GUIAS
-         */
-        whereCondition.enviadoPorId =
-          user.id;
+        if (
+          user.role === "LOCAL"
+        ) {
+
+          whereCondition.enviadoPorId =
+            user.id;
+
+        } else {
+
+          whereCondition.enviadoPor = {
+
+            role: "CENTRAL",
+          };
+        }
       }
 
       /**
-       * =================================
-       * CENTRAL
-       * =================================
+       * =====================================
+       * TRANSITO
+       * GUIAS POR VALIDAR
+       * (DESTINO)
+       * =====================================
        */
-      if (user.role === "CENTRAL") {
+      if (
+        estado === "TRANSITO" &&
+        modo === "validar"
+      ) {
 
-        /**
-         * SOLO GUIAS CREADAS
-         * POR USUARIOS CENTRAL
-         */
-        whereCondition.enviadoPor = {
+        if (
+          user.role === "LOCAL"
+        ) {
 
-          role: "CENTRAL",
-        };
+          whereCondition.destinoLocalId =
+            user.localId;
+
+        } else {
+
+          whereCondition.destinoTipo =
+            "CENTRAL";
+        }
+      }
+
+      /**
+       * =====================================
+       * TRANSITO
+       * LISTADO NORMAL
+       * (ORIGEN)
+       * =====================================
+       */
+      if (
+        estado === "TRANSITO" &&
+        modo !== "validar"
+      ) {
+
+        if (
+          user.role === "LOCAL"
+        ) {
+
+          whereCondition.enviadoPorId =
+            user.id;
+
+        } else {
+
+          whereCondition.enviadoPor = {
+
+            role: "CENTRAL",
+          };
+        }
       }
 
     } else {
 
       /**
-       * ESTADOS GENERALES
+       * =====================================
+       * TODAS LAS GUIAS
+       * =====================================
        */
       whereCondition.estado = {
 
@@ -103,23 +159,24 @@ export async function GET(req: NextRequest) {
         ],
       };
 
-      /**
-       * =================================
-       * LOCAL
-       * =================================
-       */
-      if (user.role === "LOCAL") {
+      if (
+        user.role === "LOCAL"
+      ) {
 
-        whereCondition.enviadoPorId =
-          user.id;
-      }
+        whereCondition.OR = [
 
-      /**
-       * =================================
-       * CENTRAL
-       * =================================
-       */
-      if (user.role === "CENTRAL") {
+          {
+            origenLocalId:
+              user.localId,
+          },
+
+          {
+            destinoLocalId:
+              user.localId,
+          },
+        ];
+
+      } else {
 
         whereCondition.enviadoPor = {
 
@@ -147,6 +204,7 @@ export async function GET(req: NextRequest) {
           enviadoPor: {
 
             include: {
+
               local: true,
             },
           },
@@ -158,12 +216,14 @@ export async function GET(req: NextRequest) {
           _count: {
 
             select: {
+
               details: true,
             },
           },
         },
 
         orderBy: {
+
           id: "desc",
         },
       });
@@ -172,12 +232,10 @@ export async function GET(req: NextRequest) {
      * RESPONSE
      */
     const response =
-      guias.map((guia: { enviadoPor: { nombre: string; role: string; }; encargadoTipo: string; encargadoUser: { nombre: any; }; enviadoPorId: any; }) => {
+      guias.map((guia: { enviadoPor: { nombre: string; }; encargadoTipo: string; encargadoUser: { nombre: any; }; enviadoPorId: any; }) => {
 
         /**
          * ORIGEN
-         * SIEMPRE EL NOMBRE
-         * DEL USUARIO
          */
         const origen =
           guia.enviadoPor?.nombre ||
@@ -187,20 +245,16 @@ export async function GET(req: NextRequest) {
          * TRASLADO
          */
         const traslado =
-          guia.enviadoPor?.role ===
-          "LOCAL"
+          guia.encargadoTipo ===
+          "TRANSPORTE"
 
             ? "TRANSPORTE"
 
-            : guia.encargadoTipo ===
-              "TRANSPORTE"
-
-              ? "TRANSPORTE"
-
-              : guia.encargadoUser
-                  ?.nombre || "-";
+            : guia.encargadoUser
+                ?.nombre || "-";
 
         /**
+         * SOLO EL ORIGEN
          * PUEDE OPERAR
          */
         const puedeOperar =

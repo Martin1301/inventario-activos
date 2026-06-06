@@ -50,7 +50,7 @@ export default function ValidarGuiasPage() {
     try {
 
       const res = await fetch(
-        "/api/guias?estado=TRANSITO"
+          "/api/guias?estado=TRANSITO&modo=validar"
       );
 
       const data =
